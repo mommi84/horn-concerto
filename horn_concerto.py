@@ -37,11 +37,11 @@ def sparql_query(query):
     param["debug"] = "on"
     try:
         resp = urllib2.urlopen(ENDPOINT + "?" + urllib.urlencode(param))
+        j = resp.read()
+        resp.close()
     except urllib2.HTTPError:
-        print "*** Query error. Skipping... ***"
-        return "{ 'results': { 'bindings': [] } }"
-    j = resp.read()
-    resp.close()
+        print "*** Query error. Empty result set. ***"
+        j = '{ "results": { "bindings": [] } }'
     return json.loads(j)
 
 def simple_rules(q):

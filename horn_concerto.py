@@ -3,7 +3,7 @@
 Horn Concerto - Mining horn clauses in RDF datasets using SPARQL queries.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
 """
-import urllib2, urllib, json
+import urllib2, urllib, httplib, json
 import sys
 import pickle
 import time
@@ -11,7 +11,7 @@ import time
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-if len(sys.argv) == 1:
+if len(sys.argv) < 2:
     ENDPOINT = "http://dbpedia.org/sparql"
     GRAPH = "http://dbpedia.org"
 else:
@@ -21,7 +21,14 @@ else:
 # ENDPOINT = "http://localhost:8890/sparql"
 # GRAPH = "http://linkedmdb.org"
 
-MIN_CONFIDENCE = 0.001
+if len(sys.argv) < 4:
+    MIN_CONFIDENCE = 0.001
+    N_PROPERTIES = 100
+    N_TRIANGLES = 10
+else:
+    MIN_CONFIDENCE = float(sys.argv[3])
+    N_PROPERTIES = int(sys.argv[4])
+    N_TRIANGLES = int(sys.argv[5])
 
 def sort_by_value_desc(d):
     return sorted(d.items(), key=lambda e: e[1], reverse=True)
@@ -39,7 +46,7 @@ def sparql_query(query):
         resp = urllib2.urlopen(ENDPOINT + "?" + urllib.urlencode(param))
         j = resp.read()
         resp.close()
-    except urllib2.HTTPError:
+    except (urllib2.HTTPError, httplib.BadStatusLine):
         print "*** Query error. Empty result set. ***"
         j = '{ "results": { "bindings": [] } }'
     return json.loads(j)
@@ -69,7 +76,7 @@ def type_two_rules(q):
     return rules
 
 def top_properties():
-    TOP_PROPERTIES = 'SELECT ?q (COUNT(*) AS ?c) WHERE { [] ?q [] } GROUP BY ?q ORDER BY DESC(?c) LIMIT 100'
+    TOP_PROPERTIES = 'SELECT ?q (COUNT(*) AS ?c) WHERE { [] ?q [] } GROUP BY ?q ORDER BY DESC(?c) LIMIT ' + str(N_PROPERTIES)
     print "Querying:", TOP_PROPERTIES
     tp = dict()
     results = sparql_query(TOP_PROPERTIES)
@@ -80,7 +87,7 @@ def top_properties():
     
 def triangles(t, p):
     tri = [["?x ?q ?z", "?z ?r ?y"], ["?x ?q ?z", "?y ?r ?z"], ["?z ?q ?x", "?z ?r ?y"], ["?z ?q ?x", "?y ?r ?z"]]
-    TRIANGLES = 'SELECT ?q ?r (COUNT(*) AS ?c) WHERE { ' + tri[t][0] + ' . ' + tri[t][1] + ' . ?x <' + p + '> ?y } GROUP BY ?q ?r ORDER BY DESC(?c) LIMIT 10'
+    TRIANGLES = 'SELECT ?q ?r (COUNT(*) AS ?c) WHERE { ' + tri[t][0] + ' . ' + tri[t][1] + ' . ?x <' + p + '> ?y } GROUP BY ?q ?r ORDER BY DESC(?c) LIMIT ' + str(N_TRIANGLES)
     print "Querying:", TRIANGLES
     rules = dict()
     start = time.time()

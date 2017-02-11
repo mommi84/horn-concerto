@@ -57,8 +57,11 @@ def simple_rules(q):
     start = time.time()
     results = sparql_query(SIMPLE_RULES)
     print "Time: {}".format(time.time() - start)
-    for result in results["results"]["bindings"]:
-        rules[str(result["p"]["value"])] = int(result["c"]["value"])
+    try:
+        for result in results["results"]["bindings"]:
+            rules[str(result["p"]["value"])] = int(result["c"]["value"])
+    except KeyError:
+        pass
     print "Result:", rules
     return rules
 
@@ -69,8 +72,11 @@ def type_two_rules(q):
     start = time.time()
     results = sparql_query(TYPE_2_RULES)
     print "Time: {}".format(time.time() - start)
-    for result in results["results"]["bindings"]:
-        rules[str(result["p"]["value"])] = int(result["c"]["value"])
+    try:
+        for result in results["results"]["bindings"]:
+            rules[str(result["p"]["value"])] = int(result["c"]["value"])
+    except KeyError:
+        pass
     print "Result:", rules
     return rules
 
@@ -79,8 +85,11 @@ def top_properties():
     print "Querying:", TOP_PROPERTIES
     tp = dict()
     results = sparql_query(TOP_PROPERTIES)
-    for result in results["results"]["bindings"]:
-        tp[str(result["q"]["value"])] = int(result["c"]["value"])
+    try:
+        for result in results["results"]["bindings"]:
+            tp[str(result["q"]["value"])] = int(result["c"]["value"])
+    except KeyError:
+        pass
     print "Result:", tp
     return tp
     
@@ -92,8 +101,11 @@ def triangles(t, p):
     start = time.time()
     results = sparql_query(TRIANGLES)
     print "Time: {}".format(time.time() - start)
-    for result in results["results"]["bindings"]:
-        rules[(str(result["q"]["value"]), str(result["r"]["value"]))] = int(result["c"]["value"])
+    try:
+        for result in results["results"]["bindings"]:
+            rules[(str(result["q"]["value"]), str(result["r"]["value"]))] = int(result["c"]["value"])
+    except KeyError:
+        pass
     print "Result:", rules
     return rules    
 
@@ -104,7 +116,10 @@ def adjacencies(t, k):
     start = time.time()
     results = sparql_query(ADJACENCIES)
     print "Time: {}".format(time.time() - start)
-    res = results["results"]["bindings"]
+    try:
+        res = results["results"]["bindings"]
+    except KeyError:
+        return 0
     if len(res) == 0:
         return 0
     else:

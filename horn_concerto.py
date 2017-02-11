@@ -11,15 +11,14 @@ import time
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
+VERSION = "0.0.1"
+
 if len(sys.argv) < 2:
     ENDPOINT = "http://dbpedia.org/sparql"
     GRAPH = "http://dbpedia.org"
 else:
     ENDPOINT = sys.argv[1]
     GRAPH = sys.argv[2]
-
-# ENDPOINT = "http://localhost:8890/sparql"
-# GRAPH = "http://linkedmdb.org"
 
 if len(sys.argv) < 4:
     MIN_CONFIDENCE = 0.001
@@ -141,6 +140,11 @@ def write_titles():
             with open("rules-{}.tsv".format(files[t]), 'w') as f:
                 f.write(unicode("weight\tp\t(?,?)\tq\t(?,?)\tr\t(?,?)\n"))
 
+##############################################################
+
+print "Horn Concerto v{}".format(VERSION)
+print "Endpoint: {}\nGraph: {}\nMin_Confidence: {}\nN_Properties: {}\nN_Triangles: {}\n".format(ENDPOINT, GRAPH, MIN_CONFIDENCE, N_PROPERTIES, N_TRIANGLES)
+
 write_titles()
 
 tp = top_properties()
@@ -149,11 +153,7 @@ tp = top_properties()
 
 # p(x,y) <= q(x,y)
 print "Rules of type I: p(x,y) <= q(x,y)"
-i = 0
 for tp_key, tp_val in sort_by_value_desc(tp):
-    i += 1
-    if i < 11:
-        continue
     print "Processing:", tp_key, tp_val
     r = simple_rules(tp_key)
     for r_key, r_val in sort_by_value_desc(r):
@@ -165,15 +165,10 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         worth = write_rule(0, c, r_key, tp_key)
         if not worth:
             break
-    print "-----"
 
 # p(x,y) <= q(y,x)
 print "Rules of type II: p(x,y) <= q(y,x)"
-j = 0 # TODO remove me
 for tp_key, tp_val in sort_by_value_desc(tp):
-    j += 1
-    if j < 8:
-        continue
     print "Processing:", tp_key, tp_val
     r = type_two_rules(tp_key)
     for r_key, r_val in sort_by_value_desc(r):
@@ -182,14 +177,15 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         c = float(r_val) / float(tp_val)
         print "c = {}\t{} (x,y) <= {} (y,x)".format(c, r_key, tp_key)
         # output rule as p(x,y) <= q(y,x)
-        write_rule(1, c, tp_key, r_key)
-    print "-----"
+        worth = write_rule(1, c, tp_key, r_key)
+        if not worth:
+            break
 
-# adj_dict: there might exist p_1,p_2 such that: p_i(x,y) <= q(?,?), r(?,?)
+# there might exist p_1,p_2 such that: p_i(x,y) <= q(?,?), r(?,?)
+adj_dict = dict()
 
 # p(x,y) <= q(x,z), r(z,y) | forward-forward | x->z->y
 print "Rules of type III: p(x,y) <= q(x,z), r(z,y)"
-adj_dict = dict()
 for tp_key, tp_val in sort_by_value_desc(tp):
     print "Processing:", tp_key
     triang = triangles(0, tp_key)
@@ -205,13 +201,14 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         c = float(v) / float(adj)
         print "*** RULE FOUND! ***"
         print "c = {}\t{} (x,y) <= {} (x,z) ^ {} (z,y)".format(c, tp_key, k[0], k[1])
-        write_rule_3(0, c, tp_key, k[0], k[1])
+        worth = write_rule_3(0, c, tp_key, k[0], k[1])
+        if not worth:
+            break
         adj_dict[k] = adj
 adj_dict.clear()
 
 # p(x,y) <= q(x,z), r(y,z) | forward-backward | x->z<-y
 print "Rules of type IV: p(x,y) <= q(x,z), r(y,z)"
-adj_dict = dict()
 for tp_key, tp_val in sort_by_value_desc(tp):
     print "Processing:", tp_key
     triang = triangles(1, tp_key)
@@ -227,13 +224,14 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         c = float(v) / float(adj)
         print "*** RULE FOUND! ***"
         print "c = {}\t{} (x,y) <= {} (x,z) ^ {} (y,z)".format(c, tp_key, k[0], k[1])
-        write_rule_3(1, c, tp_key, k[0], k[1])
+        worth = write_rule_3(1, c, tp_key, k[0], k[1])
+        if not worth:
+            break
         adj_dict[k] = adj
 adj_dict.clear()
 
 # p(x,y) <= q(z,x), r(z,y) | backward-forward | x<-z->y
 print "Rules of type V: p(x,y) <= q(z,x), r(z,y)"
-adj_dict = dict()
 for tp_key, tp_val in sort_by_value_desc(tp):
     print "Processing:", tp_key
     triang = triangles(2, tp_key)
@@ -249,13 +247,14 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         c = float(v) / float(adj)
         print "*** RULE FOUND! ***"
         print "c = {}\t{} (x,y) <= {} (z,x) ^ {} (z,y)".format(c, tp_key, k[0], k[1])
-        write_rule_3(2, c, tp_key, k[0], k[1])
+        worth = write_rule_3(2, c, tp_key, k[0], k[1])
+        if not worth:
+            break
         adj_dict[k] = adj
 adj_dict.clear()
 
 # p(x,y) <= q(z,x), r(y,z) | backward-backward | x<-z<-y
 print "Rules of type VI: p(x,y) <= q(z,x), r(y,z)"
-adj_dict = dict()
 for tp_key, tp_val in sort_by_value_desc(tp):
     print "Processing:", tp_key
     triang = triangles(3, tp_key)
@@ -271,7 +270,9 @@ for tp_key, tp_val in sort_by_value_desc(tp):
         c = float(v) / float(adj)
         print "*** RULE FOUND! ***"
         print "c = {}\t{} (x,y) <= {} (z,x) ^ {} (y,z)".format(c, tp_key, k[0], k[1])
-        write_rule_3(3, c, tp_key, k[0], k[1])
+        worth = write_rule_3(3, c, tp_key, k[0], k[1])
+        if not worth:
+            break
         adj_dict[k] = adj
 adj_dict.clear()
 

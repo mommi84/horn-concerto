@@ -39,7 +39,7 @@ def sparql_query(query):
     param["format"] = "JSON"
     param["CXML_redir_for_subjs"] = "121"
     param["CXML_redir_for_hrefs"] = ""
-    param["timeout"] = "300000"
+    param["timeout"] = "600000" # ten minutes - works with Virtuoso endpoints
     param["debug"] = "on"
     try:
         resp = urllib2.urlopen(ENDPOINT + "?" + urllib.urlencode(param))
@@ -48,6 +48,7 @@ def sparql_query(query):
     except (urllib2.HTTPError, httplib.BadStatusLine):
         print "*** Query error. Empty result set. ***"
         j = '{ "results": { "bindings": [] } }'
+    sys.stdout.flush()
     return json.loads(j)
 
 def simple_rules(q):

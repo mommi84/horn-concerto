@@ -1,7 +1,26 @@
 #!/usr/bin/env python
 """
+
 Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
+
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
+
+Version: 0.0.1
+
+Usage:
+
+    Use test endpoint (DBpedia)
+    > python horn_concerto.py
+
+    Use with default hyperparameters
+    > python horn_concerto.py <ENDPOINT> <GRAPH_IRI>
+
+    Use the current directory as output folder
+    > python horn_concerto.py <ENDPOINT> <GRAPH_IRI> <MIN_CONFIDENCE> <TOP_PROPERTIES> <MAX_TRIANGLES>
+
+    Full custom setup
+    > python horn_concerto.py <ENDPOINT> <GRAPH_IRI> <MIN_CONFIDENCE> <TOP_PROPERTIES> <MAX_TRIANGLES> <OUTPUT_FOLDER>
+
 """
 import urllib2, urllib, httplib, json
 import sys

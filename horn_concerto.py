@@ -5,7 +5,7 @@ Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
 
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
 
-Version: 0.0.1
+Version: 0.0.2
 
 Usage:
 
@@ -30,7 +30,9 @@ import time
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
+
+############################### ARGUMENTS ################################
 
 if len(sys.argv) < 2:
     ENDPOINT = "http://dbpedia.org/sparql"
@@ -53,6 +55,8 @@ if len(sys.argv) < 7:
 else:
     OUTPUT_FOLDER = sys.argv[6]
 
+############################### FUNCTIONS ################################
+
 def sort_by_value_desc(d):
     return sorted(d.items(), key=lambda e: e[1], reverse=True)
 
@@ -70,44 +74,44 @@ def sparql_query(query):
         j = resp.read()
         resp.close()
     except (urllib2.HTTPError, httplib.BadStatusLine):
-        # print "*** Query error. Empty result set. ***"
+        print "*** Query error. Empty result set. ***"
         j = '{ "results": { "bindings": [] } }'
     sys.stdout.flush()
     return json.loads(j)
 
 def simple_rules(q):
     SIMPLE_RULES = "SELECT ?p (COUNT(*) AS ?c) WHERE { ?x ?p ?y . ?x <" + q + "> ?y . FILTER(?p != <" + q + "> ) } GROUP BY ?p ORDER BY DESC(?c)"
-    # print "Querying:", SIMPLE_RULES
+    print "Querying:", SIMPLE_RULES
     rules = dict()
     start = time.time()
     results = sparql_query(SIMPLE_RULES)
-    # print "Time: {}".format(time.time() - start)
+    print "Time: {}".format(time.time() - start)
     try:
         for result in results["results"]["bindings"]:
             rules[str(result["p"]["value"])] = int(result["c"]["value"])
     except KeyError:
         pass
-    # print "Result:", rules
+    print "Result:", rules
     return rules
 
 def type_two_rules(q):
     TYPE_2_RULES = "SELECT ?p (COUNT(*) AS ?c) WHERE { ?y ?p ?x . ?x <" + q + "> ?y } GROUP BY ?p ORDER BY DESC(?c)"
-    # print "Querying:", TYPE_2_RULES
+    print "Querying:", TYPE_2_RULES
     rules = dict()
     start = time.time()
     results = sparql_query(TYPE_2_RULES)
-    # print "Time: {}".format(time.time() - start)
+    print "Time: {}".format(time.time() - start)
     try:
         for result in results["results"]["bindings"]:
             rules[str(result["p"]["value"])] = int(result["c"]["value"])
     except KeyError:
         pass
-    # print "Result:", rules
+    print "Result:", rules
     return rules
 
 def top_properties():
     TOP_PROPERTIES = 'SELECT ?q (COUNT(*) AS ?c) WHERE { [] ?q [] } GROUP BY ?q ORDER BY DESC(?c) LIMIT ' + str(N_PROPERTIES)
-    # print "Querying:", TOP_PROPERTIES
+    print "Querying:", TOP_PROPERTIES
     tp = dict()
     results = sparql_query(TOP_PROPERTIES)
     try:
@@ -115,32 +119,32 @@ def top_properties():
             tp[str(result["q"]["value"])] = int(result["c"]["value"])
     except KeyError:
         pass
-    # print "Result:", tp
+    print "Result:", tp
     return tp
     
 def triangles(t, p):
     tri = [["?x ?q ?z", "?z ?r ?y"], ["?x ?q ?z", "?y ?r ?z"], ["?z ?q ?x", "?z ?r ?y"], ["?z ?q ?x", "?y ?r ?z"]]
     TRIANGLES = 'SELECT ?q ?r (COUNT(*) AS ?c) WHERE { ' + tri[t][0] + ' . ' + tri[t][1] + ' . ?x <' + p + '> ?y } GROUP BY ?q ?r ORDER BY DESC(?c) LIMIT ' + str(N_TRIANGLES)
-    # print "Querying:", TRIANGLES
+    print "Querying:", TRIANGLES
     rules = dict()
     start = time.time()
     results = sparql_query(TRIANGLES)
-    # print "Time: {}".format(time.time() - start)
+    print "Time: {}".format(time.time() - start)
     try:
         for result in results["results"]["bindings"]:
             rules[(str(result["q"]["value"]), str(result["r"]["value"]))] = int(result["c"]["value"])
     except KeyError:
         pass
-    # print "Result:", rules
+    print "Result:", rules
     return rules    
 
 def adjacencies(t, k):
     nodes = ["xzzy", "xzyz", "zxzy", "zxyz"]
     ADJACENCIES = 'SELECT (COUNT(*) AS ?c) WHERE { ?' + nodes[t][0] + ' <' + k[0] + '> ?' + nodes[t][1] + ' . ?' + nodes[t][2] + ' <' + k[1] + '> ?' + nodes[t][3] + ' }'
-    # print "Querying:", ADJACENCIES
+    print "Querying:", ADJACENCIES
     start = time.time()
     results = sparql_query(ADJACENCIES)
-    # print "Time: {}".format(time.time() - start)
+    print "Time: {}".format(time.time() - start)
     try:
         res = results["results"]["bindings"]
     except KeyError:
@@ -180,140 +184,71 @@ def write_titles():
             with open("{}/rules-{}.tsv".format(OUTPUT_FOLDER, files[t]), 'w') as f:
                 f.write(unicode("weight\tp\t(?,?)\tq\t(?,?)\tr\t(?,?)\n"))
 
-##############################################################
+############################### ALGORITHM ################################
 
-# print "Horn Concerto v{}".format(VERSION)
-# print "Endpoint: {}\nGraph: {}\nMin_Confidence: {}\nN_Properties: {}\nN_Triangles: {}\nOutput_Folder: {}\n".format(ENDPOINT, GRAPH, MIN_CONFIDENCE, N_PROPERTIES, N_TRIANGLES, OUTPUT_FOLDER)
+print "Horn Concerto v{}".format(VERSION)
+print "Endpoint: {}\nGraph: {}\nMin_Confidence: {}\nN_Properties: {}\nN_Triangles: {}\nOutput_Folder: {}\n".format(ENDPOINT, GRAPH, MIN_CONFIDENCE, N_PROPERTIES, N_TRIANGLES, OUTPUT_FOLDER)
 
 write_titles()
 
 tp = top_properties()
-# pickle.dump(tp, open("top_prop.pkl", "wb")) # debug only
-# tp = pickle.load(open("top_prop.pkl", "rb")) # debug only
 
-# p(x,y) <= q(x,y)
-# print "Rules of type I: p(x,y) <= q(x,y)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key, tp_val
-    r = simple_rules(tp_key)
-    for r_key, r_val in sort_by_value_desc(r):
-        # print r_key, r_val
-        # print "*** RULE FOUND! ***",
-        c = float(r_val) / float(tp_val)
-        # print "c = {}\t{} (x,y) <= {} (x,y)".format(c, r_key, tp_key)
-        # output rule as p(x,y) <= q(x,y)
-        worth = write_rule(0, c, r_key, tp_key)
-        if not worth:
-            break
+types = [
+    "I: p(x,y) <= q(x,y)", 
+    "II: p(x,y) <= q(y,x)", 
+    "III: p(x,y) <= q(x,z), r(z,y)", 
+    "IV: p(x,y) <= q(x,z), r(y,z)", 
+    "V: p(x,y) <= q(z,x), r(z,y)", 
+    "VI: p(x,y) <= q(z,x), r(y,z)"]
+body = [
+    "(x,y)", 
+    "(y,x)", 
+    ("(x,z)", "(z,y)"), 
+    ("(x,z)", "(y,z)"), 
+    ("(z,x)", "(z,y)"), 
+    ("(z,x)", "(y,z)")]
 
-# p(x,y) <= q(y,x)
-# print "Rules of type II: p(x,y) <= q(y,x)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key, tp_val
-    r = type_two_rules(tp_key)
-    for r_key, r_val in sort_by_value_desc(r):
-        # print r_key, r_val
-        # print "*** RULE FOUND! ***",
-        c = float(r_val) / float(tp_val)
-        # print "c = {}\t{} (x,y) <= {} (y,x)".format(c, r_key, tp_key)
-        # output rule as p(x,y) <= q(y,x)
-        worth = write_rule(1, c, tp_key, r_key)
-        if not worth:
-            break
+# outer loop
+for i in range(len(types)):
+    print "Rules of type", types[i]
+    # there might exist p_1,p_2 such that: p_i(x,y) <= q(?,?), r(?,?)
+    # shared dictionary
+    adj_dict = dict()
+    # inner loop
+    for tp_key, tp_val in sort_by_value_desc(tp):
+        print "Processing:", tp_key, tp_val
+        if i < 2: # p-q rules
+            if i == 0: # p(x,y) <= q(x,y)
+                r = simple_rules(tp_key)
+            else: # p(x,y) <= q(y,x)
+                r = type_two_rules(tp_key)
+            for r_key, r_val in sort_by_value_desc(r):
+                print r_key, r_val
+                print "*** RULE FOUND! ***",
+                c = float(r_val) / float(tp_val)
+                print "c = {}\t{} (x,y) <= {} {}".format(c, r_key, tp_key, body[i])
+                worth = write_rule(i, c, r_key, tp_key)
+                if not worth:
+                    break
+        else: # p-q-r rules
+            j = i - 2 # p-q-r rule index
+            triang = triangles(j, tp_key)
+            for k, v in sort_by_value_desc(triang):
+                print k, v
+                if k in adj_dict:
+                    print "Value found in dictionary:", k
+                    adj = adj_dict[k]
+                else:
+                    adj = adjacencies(j, k)
+                if adj == 0:
+                    continue
+                c = float(v) / float(adj)
+                print "*** RULE FOUND! ***"
+                print "c = {}\t{} (x,y) <= {} {} ^ {} {}".format(c, tp_key, k[0], body[i][0], k[1], body[i][1])
+                worth = write_rule_3(j, c, tp_key, k[0], k[1])
+                if not worth:
+                    break
+                adj_dict[k] = adj
 
-# there might exist p_1,p_2 such that: p_i(x,y) <= q(?,?), r(?,?)
-adj_dict = dict()
-
-# p(x,y) <= q(x,z), r(z,y) | forward-forward | x->z->y
-# print "Rules of type III: p(x,y) <= q(x,z), r(z,y)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key
-    triang = triangles(0, tp_key)
-    for k, v in sort_by_value_desc(triang):
-        # print k, v
-        if k in adj_dict:
-            # print "Value found in dictionary:", k
-            adj = adj_dict[k]
-        else:
-            adj = adjacencies(0, k)
-        if adj == 0:
-            continue
-        c = float(v) / float(adj)
-        # print "*** RULE FOUND! ***"
-        # print "c = {}\t{} (x,y) <= {} (x,z) ^ {} (z,y)".format(c, tp_key, k[0], k[1])
-        worth = write_rule_3(0, c, tp_key, k[0], k[1])
-        if not worth:
-            break
-        adj_dict[k] = adj
-adj_dict.clear()
-
-# p(x,y) <= q(x,z), r(y,z) | forward-backward | x->z<-y
-# print "Rules of type IV: p(x,y) <= q(x,z), r(y,z)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key
-    triang = triangles(1, tp_key)
-    for k, v in sort_by_value_desc(triang):
-        # print k, v
-        if k in adj_dict:
-            # print "Value found in dictionary:", k
-            adj = adj_dict[k]
-        else:
-            adj = adjacencies(1, k)
-        if adj == 0:
-            continue
-        c = float(v) / float(adj)
-        # print "*** RULE FOUND! ***"
-        # print "c = {}\t{} (x,y) <= {} (x,z) ^ {} (y,z)".format(c, tp_key, k[0], k[1])
-        worth = write_rule_3(1, c, tp_key, k[0], k[1])
-        if not worth:
-            break
-        adj_dict[k] = adj
-adj_dict.clear()
-
-# p(x,y) <= q(z,x), r(z,y) | backward-forward | x<-z->y
-# print "Rules of type V: p(x,y) <= q(z,x), r(z,y)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key
-    triang = triangles(2, tp_key)
-    for k, v in sort_by_value_desc(triang):
-        # print k, v
-        if k in adj_dict:
-            # print "Value found in dictionary:", k
-            adj = adj_dict[k]
-        else:
-            adj = adjacencies(2, k)
-        if adj == 0:
-            continue
-        c = float(v) / float(adj)
-        # print "*** RULE FOUND! ***"
-        # print "c = {}\t{} (x,y) <= {} (z,x) ^ {} (z,y)".format(c, tp_key, k[0], k[1])
-        worth = write_rule_3(2, c, tp_key, k[0], k[1])
-        if not worth:
-            break
-        adj_dict[k] = adj
-adj_dict.clear()
-
-# p(x,y) <= q(z,x), r(y,z) | backward-backward | x<-z<-y
-# print "Rules of type VI: p(x,y) <= q(z,x), r(y,z)"
-for tp_key, tp_val in sort_by_value_desc(tp):
-    # print "Processing:", tp_key
-    triang = triangles(3, tp_key)
-    for k, v in sort_by_value_desc(triang):
-        # print k, v
-        if k in adj_dict:
-            # print "Value found in dictionary:", k
-            adj = adj_dict[k]
-        else:
-            adj = adjacencies(3, k)
-        if adj == 0:
-            continue
-        c = float(v) / float(adj)
-        # print "*** RULE FOUND! ***"
-        # print "c = {}\t{} (x,y) <= {} (z,x) ^ {} (y,z)".format(c, tp_key, k[0], k[1])
-        worth = write_rule_3(3, c, tp_key, k[0], k[1])
-        if not worth:
-            break
-        adj_dict[k] = adj
-adj_dict.clear()
-
-# print "Done."
+print "Done."
+print "\nRules saved in files {}/rules-*.tsv".format(OUTPUT_FOLDER)

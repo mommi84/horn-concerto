@@ -28,6 +28,7 @@ print "Cores: ", num_cores
 ENDPOINT = sys.argv[1]
 GRAPH = sys.argv[2]
 RULES = sys.argv[3]
+INFER_FUN = sys.argv[4] # 'A' (average), 'M' (maximum), 'P' (opp.product)
 
 OUTPUT_FOLDER = "."
 
@@ -51,6 +52,9 @@ def sparql_query(query):
         j = '{ "results": { "bindings": [] } }'
     sys.stdout.flush()
     return json.loads(j)
+
+def opposite_product(a):
+    return 1 - np.prod(np.ones(len(a)) - a)
 
 def inference():
     files = ["pxy-qxy", "pxy-qyx", "pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
@@ -88,7 +92,12 @@ def inference():
                     pass
 
     for triple in predictions:
-        predictions[triple] = np.mean(predictions[triple])
+        if INFER_FUN == 'A':
+            predictions[triple] = np.mean(predictions[triple])
+        if INFER_FUN == 'M':
+            predictions[triple] = np.max(predictions[triple])
+        if INFER_FUN == 'P':
+            predictions[triple] = opposite_product(predictions[triple])
     
     print "\nPREDICTIONS:"
     with open("inferred_triples.txt", "w") as fout:
@@ -100,6 +109,6 @@ def inference():
 ############################### ALGORITHM ################################
 
 print "Horn Concerto v{}".format(VERSION)
-print "Endpoint: {}\nGraph: {}\nRules: {}\n".format(ENDPOINT, GRAPH, RULES)
+print "Endpoint: {}\nGraph: {}\nRules: {}\nInference function: {}\n".format(ENDPOINT, GRAPH, RULES, INFER_FUN)
 
 inference()

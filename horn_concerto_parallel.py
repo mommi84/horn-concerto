@@ -2,7 +2,7 @@
 """
 Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.2
+Version: 0.0.3
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto.py
@@ -23,10 +23,10 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 
 ############################### ARGUMENTS ################################
-num_cores = 1 # multiprocessing.cpu_count()
+num_cores = multiprocessing.cpu_count()
 print "Cores: ", num_cores
 
 
@@ -83,12 +83,6 @@ def simple_rules(q):
     results = sparql_query(SIMPLE_RULES)
     print "Time: {}".format(time.time() - start)
     try:
-	#def resultBind(res):
-		#rules[str(res["p"]["value"])] = int(res["c"]["value"])
-
-	#Parallel(n_jobs=num_cores)(delayed(resultBind)(res=resElem) for resElem in results["results"]["bindings"])	
-	
-
         for result in results["results"]["bindings"]:
             rules[str(result["p"]["value"])] = int(result["c"]["value"])
     except KeyError:

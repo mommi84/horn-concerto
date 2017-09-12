@@ -2,7 +2,7 @@
 """
 Horn Concerto - Inference from Horn rules.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.1
+Version: 0.0.3
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto_inference.py <ENDPOINT> <GRAPH_IRI> <RULES_PATH>
@@ -18,7 +18,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.1"
+VERSION = "0.0.3"
 
 ############################### ARGUMENTS ################################
 num_cores = multiprocessing.cpu_count()
@@ -32,7 +32,10 @@ predictions = dict()
 ENDPOINT = sys.argv[1]
 GRAPH = sys.argv[2]
 RULES = sys.argv[3]
-INFER_FUN = sys.argv[4] # 'A' (average), 'M' (maximum), 'P' (opp.product)
+if len(sys.argv) <= 4:
+    INFER_FUN = 'M'
+else:
+    INFER_FUN = sys.argv[4] # 'A' (average), 'M' (maximum), 'P' (opp.product)
 
 OUTPUT_FOLDER = "."
 
@@ -106,19 +109,26 @@ preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t) for t in range(len(fil
 for p in preds:
     predictions.update(p)
 
-print "Computing inference values..."
-for triple in predictions:
-    if INFER_FUN == 'A':
-        predictions[triple] = np.mean(predictions[triple])
-    if INFER_FUN == 'M':
-        predictions[triple] = np.max(predictions[triple])
-    if INFER_FUN == 'P':
-        predictions[triple] = opposite_product(predictions[triple])
+with open('predictions.txt', 'w') as fout:
+    for p in predictions:
+        fout.write("{}\t{}\n".format(p, predictions[p]))
 
-print "Saving predictions to file..."
-# print "\nPREDICTIONS:"
-with open("inferred_triples.txt", "w") as fout:
-    for key, value in sorted(predictions.iteritems(), key=lambda (k,v): (v,k), reverse=True):
-        # print "%.3f\t%s" % (value, key)
-        fout.write("%.3f\t%s\n" % (value, key))
+print "Computing inference values..."
+for fun in INFER_FUN.split(","):
+    
+    predictions_fun = dict()
+    
+    for triple in predictions:
+        if fun == 'A':
+            predictions_fun[triple] = np.mean(predictions[triple])
+        if fun == 'M':
+            predictions_fun[triple] = np.max(predictions[triple])
+        if fun == 'P':
+            predictions_fun[triple] = opposite_product(predictions[triple])
+
+    print "Saving predictions to file..."
+    with open("inferred_triples_{}.txt".format(fun), "w") as fout:
+        for key, value in sorted(predictions_fun.iteritems(), key=lambda (k,v): (v,k), reverse=True):
+            # print "%.3f\t%s" % (value, key)
+            fout.write("%.3f\t%s\n" % (value, key))
 

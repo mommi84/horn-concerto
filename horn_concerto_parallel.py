@@ -2,7 +2,7 @@
 """
 Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.3
+Version: 0.0.4
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto.py
@@ -23,33 +23,14 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 
-############################### ARGUMENTS ################################
-num_cores = multiprocessing.cpu_count()
-print "Cores: ", num_cores
-
-
-if len(sys.argv) < 2:
-    ENDPOINT = "http://dbpedia.org/sparql"
-    GRAPH = "http://dbpedia.org"
-else:
-    ENDPOINT = sys.argv[1]
-    GRAPH = sys.argv[2]
-
-if len(sys.argv) < 4:
-    MIN_CONFIDENCE = 0.001
-    N_PROPERTIES = 100
-    N_TRIANGLES = 10
-else:
-    MIN_CONFIDENCE = float(sys.argv[3])
-    N_PROPERTIES = int(sys.argv[4])
-    N_TRIANGLES = int(sys.argv[5])
-    
-if len(sys.argv) < 7:
-    OUTPUT_FOLDER = "."
-else:
-    OUTPUT_FOLDER = sys.argv[6]
+endpoint = None
+graph = None
+min_confidence = None
+n_properties = None
+n_triangles = None
+output_folder = None
 
 ############################### FUNCTIONS ################################
 
@@ -58,7 +39,7 @@ def sort_by_value_desc(d):
 
 def sparql_query(query):
     param = dict()
-    param["default-graph-uri"] = GRAPH
+    param["default-graph-uri"] = graph
     param["query"] = query
     param["format"] = "JSON"
     param["CXML_redir_for_subjs"] = "121"
@@ -66,7 +47,7 @@ def sparql_query(query):
     param["timeout"] = "600000" # ten minutes - works with Virtuoso endpoints
     param["debug"] = "on"
     try:
-        resp = urllib2.urlopen(ENDPOINT + "?" + urllib.urlencode(param))
+        resp = urllib2.urlopen(endpoint + "?" + urllib.urlencode(param))
         j = resp.read()
         resp.close()
     except (urllib2.HTTPError, httplib.BadStatusLine):
@@ -106,7 +87,7 @@ def type_two_rules(q):
     return rules
 
 def top_properties():
-    TOP_PROPERTIES = 'SELECT ?q (COUNT(*) AS ?c) WHERE { [] ?q [] } GROUP BY ?q ORDER BY DESC(?c) LIMIT ' + str(N_PROPERTIES)
+    TOP_PROPERTIES = 'SELECT ?q (COUNT(*) AS ?c) WHERE { [] ?q [] } GROUP BY ?q ORDER BY DESC(?c) LIMIT ' + str(n_properties)
     print "Querying:", TOP_PROPERTIES
     tp = dict()
     results = sparql_query(TOP_PROPERTIES)
@@ -120,7 +101,7 @@ def top_properties():
     
 def triangles(t, p):
     tri = [["?x ?q ?z", "?z ?r ?y"], ["?x ?q ?z", "?y ?r ?z"], ["?z ?q ?x", "?z ?r ?y"], ["?z ?q ?x", "?y ?r ?z"]]
-    TRIANGLES = 'SELECT ?q ?r (COUNT(*) AS ?c) WHERE { ' + tri[t][0] + ' . ' + tri[t][1] + ' . ?x <' + p + '> ?y } GROUP BY ?q ?r ORDER BY DESC(?c) LIMIT ' + str(N_TRIANGLES)
+    TRIANGLES = 'SELECT ?q ?r (COUNT(*) AS ?c) WHERE { ' + tri[t][0] + ' . ' + tri[t][1] + ' . ?x <' + p + '> ?y } GROUP BY ?q ?r ORDER BY DESC(?c) LIMIT ' + str(n_triangles)
     print "Querying:", TRIANGLES
     rules = dict()
     start = time.time()
@@ -154,8 +135,8 @@ def write_rule(t, c, p, q):
     files = ["pxy-qxy", "pxy-qyx"]
     args = ["(x,y)", "(y,x)"]
     worth = False
-    with open("{}/rules-{}.tsv".format(OUTPUT_FOLDER, files[t]), 'a') as f:
-        if c > MIN_CONFIDENCE:
+    with open("{}/rules-{}.tsv".format(output_folder, files[t]), 'a') as f:
+        if c > min_confidence:
             f.write("{}\t{}\t(x,y)\t{}\t{}\n".format(c, p, q, args[t]))
             worth = True
     return worth
@@ -164,30 +145,22 @@ def write_rule_3(t, c, p, q, r):
     files = ["pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
     args = [["(x,z)", "(z,y)"], ["(x,z)", "(y,z)"], ["(z,x)", "(z,y)"], ["(z,x)", "(y,z)"]]
     worth = False
-    with open("{}/rules-{}.tsv".format(OUTPUT_FOLDER, files[t]), 'a') as f:
-        if c > MIN_CONFIDENCE:
+    with open("{}/rules-{}.tsv".format(output_folder, files[t]), 'a') as f:
+        if c > min_confidence:
             f.write("{}\t{}\t(x,y)\t{}\t{}\t{}\t{}\n".format(c, p, q, args[t][0], r, args[t][1]))
             worth = True
     return worth
 
 def write_titles():
+    print "output_folder:", output_folder
     files = ["pxy-qxy", "pxy-qyx", "pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
     for t in range(len(files)):
         if t < 2:
-            with open("{}/rules-{}.tsv".format(OUTPUT_FOLDER, files[t]), 'w') as f:
+            with open("{}/rules-{}.tsv".format(output_folder, files[t]), 'w') as f:
                 f.write(unicode("weight\tp\t(?,?)\tq\t(?,?)\n"))
         else:
-            with open("{}/rules-{}.tsv".format(OUTPUT_FOLDER, files[t]), 'w') as f:
+            with open("{}/rules-{}.tsv".format(output_folder, files[t]), 'w') as f:
                 f.write(unicode("weight\tp\t(?,?)\tq\t(?,?)\tr\t(?,?)\n"))
-
-############################### ALGORITHM ################################
-
-print "Horn Concerto v{}".format(VERSION)
-print "Endpoint: {}\nGraph: {}\nMin_Confidence: {}\nN_Properties: {}\nN_Triangles: {}\nOutput_Folder: {}\n".format(ENDPOINT, GRAPH, MIN_CONFIDENCE, N_PROPERTIES, N_TRIANGLES, OUTPUT_FOLDER)
-
-write_titles()
-
-tp = top_properties()
 
 types = [
     "I: p(x,y) <= q(x,y)", 
@@ -205,9 +178,7 @@ body = [
     ("(z,x)", "(y,z)")]
 
 # outer loop
-#for i in range(len(types)):
-# outer loop Parallel
-def rangeTypes(i):
+def rangeTypes(i, tp):
     print "Rules of type", types[i]
     # there might exist p_1,p_2 such that: p_i(x,y) <= q(?,?), r(?,?)
     # shared dictionary
@@ -248,8 +219,56 @@ def rangeTypes(i):
                     break
                 adj_dict[k] = adj
 
-# Making outer loop Parallel
-Parallel(n_jobs=num_cores)(delayed(rangeTypes)(i=iElem) for iElem in range(len(types)))
+############################### ALGORITHM ################################
 
-print "Done."
-print "\nRules saved in files {}/rules-*.tsv".format(OUTPUT_FOLDER)
+def run(endpoint_P, graph_P, min_confidence_P, n_properties_P, n_triangles_P, output_folder_P):
+    
+    global endpoint, graph, min_confidence, n_properties, n_triangles, output_folder
+    
+    endpoint = endpoint_P
+    graph = graph_P
+    min_confidence = min_confidence_P
+    n_properties = n_properties_P
+    n_triangles = n_triangles_P
+    output_folder = output_folder_P
+    
+    print "Horn Concerto v{}".format(VERSION)
+    print "Endpoint: {}\nGraph: {}\nMin_Confidence: {}\nN_Properties: {}\nN_Triangles: {}\nOutput_Folder: {}\n".format(endpoint, graph, min_confidence, n_properties, n_triangles, output_folder)
+    num_cores = multiprocessing.cpu_count()
+    print "Cores:", num_cores
+    
+    write_titles()
+
+    tp = top_properties()
+
+    # Making outer loop Parallel
+    Parallel(n_jobs=num_cores)(delayed(rangeTypes)(i=iElem, tp=tp) for iElem in range(len(types)))
+
+    print "Done."
+    print "\nRules saved in files {}/rules-*.tsv".format(output_folder)
+
+if __name__ == '__main__':
+    
+############################### ARGUMENTS ################################
+    if len(sys.argv) < 2:
+        endpoint = "http://dbpedia.org/sparql"
+        graph = "http://dbpedia.org"
+    else:
+        endpoint = sys.argv[1]
+        graph = sys.argv[2]
+
+    if len(sys.argv) < 4:
+        min_confidence = 0.001
+        n_properties = 100
+        n_triangles = 10
+    else:
+        min_confidence = float(sys.argv[3])
+        n_properties = int(sys.argv[4])
+        n_triangles = int(sys.argv[5])
+    
+    if len(sys.argv) < 7:
+        output_folder = "."
+    else:
+        output_folder = sys.argv[6]
+    
+    run(endpoint, graph, min_confidence, n_properties, n_triangles, output_folder)

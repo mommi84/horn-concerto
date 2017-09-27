@@ -2,10 +2,10 @@
 """
 Horn Concerto - Inference from Horn rules.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.3
+Version: 0.0.4
 Usage:
     Use test endpoint (DBpedia)
-    > python horn_concerto_inference.py <ENDPOINT> <GRAPH_IRI> <RULES_PATH>
+    > python horn_concerto_inference.py <endpoint> <graph_IRI> <rules_PATH> <infer_function> <output_folder>
 """
 import urllib2, urllib, httplib, json
 import sys
@@ -18,32 +18,19 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 
-############################### ARGUMENTS ################################
-num_cores = multiprocessing.cpu_count()
-print "Cores: ", num_cores
-
-files = ["pxy-qxy", "pxy-qyx", "pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
-
-# TODO WARNING: in-memory solution - good only for evaluating benchmarks
-predictions = dict()
-
-ENDPOINT = sys.argv[1]
-GRAPH = sys.argv[2]
-RULES = sys.argv[3]
-if len(sys.argv) <= 4:
-    INFER_FUN = 'M'
-else:
-    INFER_FUN = sys.argv[4] # 'A' (average), 'M' (maximum), 'P' (opp.product)
-
-OUTPUT_FOLDER = "."
+endpoint = None
+graph = None
+rules = None
+infer_fun = None
+output_folder = None
 
 ############################### FUNCTIONS ################################
 
 def sparql_query(query):
     param = dict()
-    param["default-graph-uri"] = GRAPH
+    param["default-graph-uri"] = graph
     param["query"] = query
     param["format"] = "JSON"
     param["CXML_redir_for_subjs"] = "121"
@@ -51,7 +38,7 @@ def sparql_query(query):
     param["timeout"] = "600000" # ten minutes - works with Virtuoso endpoints
     param["debug"] = "on"
     try:
-        resp = urllib2.urlopen(ENDPOINT + "?" + urllib.urlencode(param))
+        resp = urllib2.urlopen(endpoint + "?" + urllib.urlencode(param))
         j = resp.read()
         resp.close()
     except (urllib2.HTTPError, httplib.BadStatusLine):
@@ -64,11 +51,16 @@ def sparql_query(query):
 def opposite_product(a):
     return 1 - np.prod(np.ones(len(a)) - a)
 
+files = ["pxy-qxy", "pxy-qyx", "pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
+# TODO WARNING: in-memory solution - good only for evaluating benchmarks
+predictions = dict()
+
 def retrieve(t):
     
+    global files, predictions
     preds = dict()
     
-    with open(RULES + "/rules-" + files[t] + ".tsv") as f:
+    with open(rules + "/rules-" + files[t] + ".tsv") as f:
         next(f)
         for line in f:
             line = line[:-1].split('\t')
@@ -100,35 +92,67 @@ def retrieve(t):
 
 ############################### ALGORITHM ################################
 
-print "Horn Concerto v{}".format(VERSION)
-print "Endpoint: {}\nGraph: {}\nRules: {}\nInference function: {}\n".format(ENDPOINT, GRAPH, RULES, INFER_FUN)
-
-print "Retrieving conditional probabilities..."
-preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t) for t in range(len(files)))
-
-for p in preds:
-    predictions.update(p)
-
-with open('predictions.txt', 'w') as fout:
-    for p in predictions:
-        fout.write("{}\t{}\n".format(p, predictions[p]))
-
-print "Computing inference values..."
-for fun in INFER_FUN.split(","):
+def run(endpoint_P, graph_P, rules_P, infer_fun_P, output_folder_P):
     
-    predictions_fun = dict()
+    global endpoint, graph, rules, infer_fun, output_folder
+    global files, predictions
     
-    for triple in predictions:
-        if fun == 'A':
-            predictions_fun[triple] = np.mean(predictions[triple])
-        if fun == 'M':
-            predictions_fun[triple] = np.max(predictions[triple])
-        if fun == 'P':
-            predictions_fun[triple] = opposite_product(predictions[triple])
+    endpoint = endpoint_P
+    graph = graph_P
+    rules = rules_P
+    infer_fun = infer_fun_P
+    output_folder = output_folder_P
+    
+    print "Horn Concerto v{}".format(VERSION)
+    print "Endpoint: {}\nGraph: {}\nRules: {}\nInference function: {}\nOutput folder: {}\n".format(endpoint, graph, rules, infer_fun, output_folder)
+    num_cores = multiprocessing.cpu_count()
+    print "Cores:", num_cores
 
-    print "Saving predictions to file..."
-    with open("inferred_triples_{}.txt".format(fun), "w") as fout:
-        for key, value in sorted(predictions_fun.iteritems(), key=lambda (k,v): (v,k), reverse=True):
-            # print "%.3f\t%s" % (value, key)
-            fout.write("%.3f\t%s\n" % (value, key))
+    print "Retrieving conditional probabilities..."
+    preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t) for t in range(len(files)))
 
+    for p in preds:
+        predictions.update(p)
+
+    with open("{}/predictions.txt".format(output_folder), 'w') as fout:
+        for p in predictions:
+            fout.write("{}\t{}\n".format(p, predictions[p]))
+
+    print "Computing inference values..."
+    for fun in infer_fun.split(","):
+    
+        predictions_fun = dict()
+    
+        for triple in predictions:
+            if fun == 'A':
+                predictions_fun[triple] = np.mean(predictions[triple])
+            if fun == 'M':
+                predictions_fun[triple] = np.max(predictions[triple])
+            if fun == 'P':
+                predictions_fun[triple] = opposite_product(predictions[triple])
+
+        print "Number of predicted triples:", len(predictions_fun)
+        print "Saving predictions to file..."
+        with open("{}/inferred_triples_{}.txt".format(output_folder, fun), "w") as fout:
+            for key, value in sorted(predictions_fun.iteritems(), key=lambda (k,v): (v,k), reverse=True):
+                # print "%.3f\t%s" % (value, key)
+                fout.write("%.3f\t%s\n" % (value, key))
+
+if __name__ == '__main__':
+    
+    ############################### ARGUMENTS ################################
+
+    endpoint = sys.argv[1]
+    graph = sys.argv[2]
+    rules = sys.argv[3]
+    if len(sys.argv) <= 4:
+        infer_fun = 'M'
+    else:
+        infer_fun = sys.argv[4] # 'A' (average), 'M' (maximum), 'P' (opp.product)
+
+    if len(sys.argv) <= 5:
+        output_folder = "."
+    else:
+        output_folder = sys.argv[5]
+
+    run(endpoint, graph, rules, infer_fun, output_folder)

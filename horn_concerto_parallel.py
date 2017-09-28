@@ -2,7 +2,7 @@
 """
 Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.4
+Version: 0.0.5
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto.py
@@ -23,7 +23,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.4"
+VERSION = "0.0.5"
 
 endpoint = None
 graph = None

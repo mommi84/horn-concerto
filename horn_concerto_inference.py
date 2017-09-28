@@ -2,7 +2,7 @@
 """
 Horn Concerto - Inference from Horn rules.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.4
+Version: 0.0.5
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto_inference.py <endpoint> <graph_IRI> <rules_PATH> <infer_function> <output_folder>
@@ -18,7 +18,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.4"
+VERSION = "0.0.5"
 
 endpoint = None
 graph = None

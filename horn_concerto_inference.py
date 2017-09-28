@@ -52,12 +52,10 @@ def opposite_product(a):
     return 1 - np.prod(np.ones(len(a)) - a)
 
 files = ["pxy-qxy", "pxy-qyx", "pxy-qxz-rzy", "pxy-qxz-ryz", "pxy-qzx-rzy", "pxy-qzx-ryz"]
-# TODO WARNING: in-memory solution - good only for evaluating benchmarks
-predictions = dict()
 
-def retrieve(t):
+def retrieve(t, predictions):
     
-    global files, predictions
+    global files
     preds = dict()
     
     with open(rules + "/rules-" + files[t] + ".tsv") as f:
@@ -95,7 +93,7 @@ def retrieve(t):
 def run(endpoint_P, graph_P, rules_P, infer_fun_P, output_folder_P):
     
     global endpoint, graph, rules, infer_fun, output_folder
-    global files, predictions
+    global files
     
     endpoint = endpoint_P
     graph = graph_P
@@ -107,9 +105,12 @@ def run(endpoint_P, graph_P, rules_P, infer_fun_P, output_folder_P):
     print "Endpoint: {}\nGraph: {}\nRules: {}\nInference function: {}\nOutput folder: {}\n".format(endpoint, graph, rules, infer_fun, output_folder)
     num_cores = multiprocessing.cpu_count()
     print "Cores:", num_cores
+    
+    # TODO WARNING: in-memory solution - good only for evaluating benchmarks
+    predictions = dict()
 
     print "Retrieving conditional probabilities..."
-    preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t) for t in range(len(files)))
+    preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t, predictions=predictions) for t in range(len(files)))
 
     for p in preds:
         predictions.update(p)

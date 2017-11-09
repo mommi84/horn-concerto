@@ -18,7 +18,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.5"
+VERSION = "0.0.6"
 
 endpoint = None
 graph = None
@@ -79,7 +79,7 @@ def retrieve(t, predictions):
                 for result in results["results"]["bindings"]:
                     triple = "<{}> <{}> <{}>".format(str(result["x"]["value"]), head, str(result["y"]["value"]))
                     # print weight, triple
-                    if triple not in predictions:
+                    if triple not in preds:
                         preds[triple] = list()
                     preds[triple].append(weight)
                     # print predictions[triple]
@@ -106,14 +106,18 @@ def run(endpoint_P, graph_P, rules_P, infer_fun_P, output_folder_P):
     num_cores = multiprocessing.cpu_count()
     print "Cores:", num_cores
     
-    # TODO WARNING: in-memory solution - good only for evaluating benchmarks
+    # WARNING: temporary in-memory solution
     predictions = dict()
 
     print "Retrieving conditional probabilities..."
     preds = Parallel(n_jobs=num_cores)(delayed(retrieve)(t=t, predictions=predictions) for t in range(len(files)))
 
     for p in preds:
-        predictions.update(p)
+        for triple in p:
+            if triple not in predictions:
+                predictions[triple] = list()
+            for val in p[triple]:
+                predictions[triple].append(val)
 
     with open("{}/predictions.txt".format(output_folder), 'w') as fout:
         for p in predictions:

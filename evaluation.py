@@ -24,6 +24,12 @@ print "Cores: ", num_cores
 TEST_SET = sys.argv[1]
 INFERRED = sys.argv[2]
 
+inferred = list()
+with open(INFERRED) as f:
+    for line in f:
+        line = line[:-1].split('\t')
+        inferred.append(line)
+
 test = list()
 
 def evaluate(t):
@@ -32,21 +38,19 @@ def evaluate(t):
     corr_obj = "{} {}".format(t_triple[0], t_triple[1])
     corr_sub = "{} {}".format(t_triple[1], t_triple[2])
     pos = 1
-    with open(INFERRED) as f:
-        for line in f:
-            line = line[:-1].split('\t')
-            tpl = line[1]
-            if t == tpl:
-                return pos
-            triple = tpl.split(' ')
-            if corr_obj in tpl:
-                # filter out if true
-                if not line[1] in test:
-                    pos += 1            
-            elif corr_sub in tpl:
-                # filter out if true
-                if not tpl in test:
-                    pos += 1
+    for line in inferred:
+        tpl = line[1]
+        if t == tpl:
+            return pos
+        triple = tpl.split(' ')
+        if corr_obj in tpl:
+            # filter out if true
+            if not line[1] in test:
+                pos += 1            
+        elif corr_sub in tpl:
+            # filter out if true
+            if not tpl in test:
+                pos += 1
     return None
 
 # index test set
@@ -73,7 +77,7 @@ def range_test(t):
 
 rr, h1, h3, h10 = 0, 0, 0, 0
 
-STEP = 500
+STEP = 500 * num_cores
 
 for i in range(len(test)):
     if i % STEP == 0:

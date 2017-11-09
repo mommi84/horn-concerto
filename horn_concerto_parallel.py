@@ -23,7 +23,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.5"
+VERSION = "0.0.6"
 
 endpoint = None
 graph = None

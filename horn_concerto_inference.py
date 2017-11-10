@@ -2,7 +2,7 @@
 """
 Horn Concerto - Inference from Horn rules.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.5
+Version: 0.0.6
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto_inference.py <endpoint> <graph_IRI> <rules_PATH> <infer_function> <output_folder>

@@ -2,7 +2,7 @@
 """
 Horn Concerto - Mining Horn clauses in RDF datasets using SPARQL queries.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.5
+Version: 0.0.6
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto.py

@@ -2,7 +2,7 @@
 """
 Horn Concerto - Evaluation for inference.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.1
+Version: 0.0.6
 Usage:
     Use test endpoint (DBpedia)
     > python evaluation.py <TEST_SET> <INFERRED_TRIPLES>
@@ -15,7 +15,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.1"
+VERSION = "0.0.6"
 
 ############################### ARGUMENTS ################################
 num_cores = multiprocessing.cpu_count()
@@ -75,7 +75,8 @@ def range_test(t):
                 h1 = 1
     return rr, h1, h3, h10
 
-rr, h1, h3, h10 = 0, 0, 0, 0
+rr, h1, h3, h10, n = 0, 0, 0, 0, 0
+mrr, hitsAt1, hitsAt3, hitsAt10 = 0, 0, 0, 0
 
 STEP = 500 * num_cores
 
@@ -83,8 +84,9 @@ for i in range(len(test)):
     if i % STEP == 0:
         start = i / STEP
         result = Parallel(n_jobs=num_cores)(delayed(range_test)(t=t) for t in test[i:i+STEP])
+        print "len=",len(result)
         rr, h1, h3, h10 = np.sum(result, axis=0) + (rr, h1, h3, h10)
-        n = i + STEP
+        n = n + len(result)
         mrr = rr / n
         hitsAt1 = float(h1) / n
         hitsAt3 = float(h3) / n
@@ -96,15 +98,6 @@ for i in range(len(test)):
         print "Hits@3 = {}".format(hitsAt3)
         print "Hits@10 = {}".format(hitsAt10)
 
-# add remainder
-result = Parallel(n_jobs=num_cores)(delayed(range_test)(t=t) for t in test[STEP*(len(test)/STEP):])
-rr, h1, h3, h10 = np.sum(result, axis=0) + (rr, h1, h3, h10)
-print "adding range {} to {}".format(STEP*(len(test)/STEP), "END")
-
-mrr = rr / len(test)
-hitsAt1 = 100 * float(h1) / len(test)
-hitsAt3 = 100 * float(h3) / len(test)
-hitsAt10 = 100 * float(h10) / len(test)
 print "\nFINAL RESULTS"
 print "|test| = {}".format(len(test))
 print "MRR = {}".format(mrr)

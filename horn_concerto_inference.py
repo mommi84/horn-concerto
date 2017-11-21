@@ -2,7 +2,7 @@
 """
 Horn Concerto - Inference from Horn rules.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.6
+Version: 0.0.7
 Usage:
     Use test endpoint (DBpedia)
     > python horn_concerto_inference.py <endpoint> <graph_IRI> <rules_PATH> <infer_function> <output_folder>
@@ -18,7 +18,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.6"
+VERSION = "0.0.7"
 
 endpoint = None
 graph = None
@@ -71,20 +71,27 @@ def retrieve(t, predictions):
             bodies = ""
             for b in body:
                 bodies += "?{} <{}> ?{} . ".format(b[1], b[0], b[2])
-            query = "SELECT DISTINCT(?x) ?y WHERE { " + bodies + "MINUS { ?x <" + head + "> ?y } }"
-            # print query
-            results = sparql_query(query)
-            # print "\t", results
-            try:
-                for result in results["results"]["bindings"]:
-                    triple = "<{}> <{}> <{}>".format(str(result["x"]["value"]), head, str(result["y"]["value"]))
-                    # print weight, triple
-                    if triple not in preds:
-                        preds[triple] = list()
-                    preds[triple].append(weight)
-                    # print predictions[triple]
-            except KeyError:
-                pass
+            offset = 0
+            while True:
+                query = "SELECT DISTINCT(?x) ?y WHERE { " + bodies + "MINUS { ?x <" + head + "> ?y } } LIMIT 10000 OFFSET " + str(offset)
+                print query
+                results = sparql_query(query)
+                print len(results["results"]["bindings"])
+                # print "\t", results
+                try:
+                    for result in results["results"]["bindings"]:
+                        triple = "<{}> <{}> <{}>".format(str(result["x"]["value"]), head, str(result["y"]["value"]))
+                        # print weight, triple
+                        if triple not in preds:
+                            preds[triple] = list()
+                        preds[triple].append(weight)
+                        # print predictions[triple]
+                except KeyError:
+                    pass
+                if len(results["results"]["bindings"]) == 10000:
+                    offset += 10000
+                else:
+                    break
         
     return preds
 

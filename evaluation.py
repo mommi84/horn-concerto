@@ -2,7 +2,7 @@
 """
 Horn Concerto - Evaluation for inference.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.6
+Version: 0.0.7
 Usage:
     Use test endpoint (DBpedia)
     > python evaluation.py <TEST_SET> <INFERRED_TRIPLES>
@@ -15,7 +15,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.6"
+VERSION = "0.0.7"
 
 ############################### ARGUMENTS ################################
 num_cores = multiprocessing.cpu_count()

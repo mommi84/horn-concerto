@@ -16,7 +16,7 @@ The current algorithm works with any SPARQL endpoint. To test it, run it with:
 python horn_concerto_parallel.py
 ```
 
-This will start a rule-mining task on http://dbpedia.org/sparql using default parameter values. Rules will be saved in files as `OUTPUT_FOLDER/rules-*.tsv`.
+This will start a rule-mining task on http://dbpedia.org/sparql using default parameter values. Rules will be saved in files as `rules-*.tsv`.
 
 
 ## Mining data dumps
@@ -52,4 +52,4 @@ Horn Concerto can infer new triples in the graph using the previously discovered
 python horn_concerto_inference.py ENDPOINT GRAPH_NAME RULES_FOLDER INFER_FUN
 ```
 
-where `INFER_FUN` is the inference function which can have the following values: `A` (average), `M` (maximum), `P` (opposite product). Discovered triples and their confidence values will be found in file `inferred_triples.txt`.
+where `INFER_FUN` is the inference function which can have the following values: `A` (average), `M` (maximum), `P` (opposite product), or `A,M,P` for all. Discovered triples and their confidence values will be found in file `inferred_triples_*.txt`.

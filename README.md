@@ -59,7 +59,7 @@ where `INFER_FUN` is the inference function which can have the following values:
 If you use Horn Concerto in your research, please cite: https://arxiv.org/abs/1802.03638
 
 ```
-@proceedings{soru-marx-2017,
+@proceedings{soru-hc-2018,
     author = "Tommaso Soru and Andr\'e Valdestilhas and Edgard Marx and Axel-Cyrille {Ngonga Ngomo}",
     title = "Beyond Markov Logic: Efficient Mining of Prediction Rules in Large Graphs",
     year = "2018",

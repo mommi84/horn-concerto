@@ -1,6 +1,8 @@
 # Horn Concerto
 📯 Knowledge Discovery in RDF Datasets using SPARQL Queries.
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3bafbe6a3bfb420282e57c2b89b0a5bf)](https://www.codacy.com/app/mommi84/horn-concerto?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mommi84/horn-concerto&amp;utm_campaign=Badge_Grade)
+
 To install Horn Concerto, clone its repository and cd into it.
 
 ```bash

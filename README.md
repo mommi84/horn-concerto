@@ -1,6 +1,8 @@
 # Horn Concerto
 📯 Knowledge Discovery in RDF Datasets using SPARQL Queries.
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3bafbe6a3bfb420282e57c2b89b0a5bf)](https://www.codacy.com/app/mommi84/horn-concerto?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mommi84/horn-concerto&amp;utm_campaign=Badge_Grade)
+
 To install Horn Concerto, clone its repository and cd into it.
 
 ```bash
@@ -52,4 +54,18 @@ Horn Concerto can infer new triples in the graph using the previously discovered
 python horn_concerto_inference.py ENDPOINT GRAPH_NAME RULES_FOLDER INFER_FUN
 ```
 
-where `INFER_FUN` is the inference function which can have the following values: `A` (average), `M` (maximum), `P` (opposite product), or `A,M,P` for all. Discovered triples and their confidence values will be found in file `inferred_triples_*.txt`.
+where `INFER_FUN` is the inference function which can have the following values: `A` (average), `M` (maximum), `P` (opposite product). Discovered triples and their confidence values will be found in file `inferred_triples_*.txt`.
+
+## Paper
+
+If you use Horn Concerto in your research, please cite: https://arxiv.org/abs/1802.03638
+
+```
+@proceedings{soru-hc-2018,
+    author = "Tommaso Soru and Andr\'e Valdestilhas and Edgard Marx and Axel-Cyrille {Ngonga Ngomo}",
+    title = "Beyond Markov Logic: Efficient Mining of Prediction Rules in Large Graphs",
+    year = "2018",
+    journal = "CoRR",
+    url = "https://arxiv.org/abs/1802.03638",
+}
+```

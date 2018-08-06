@@ -2,7 +2,7 @@
 """
 Horn Concerto - Evaluation for inference.
 Author: Tommaso Soru <tsoru@informatik.uni-leipzig.de>
-Version: 0.0.7
+Version: 0.1.0
 Usage:
     Use test endpoint (DBpedia)
     > python evaluation.py <TEST_SET> <INFERRED_TRIPLES>
@@ -15,7 +15,7 @@ import multiprocessing
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-VERSION = "0.0.7"
+VERSION = "0.1.0"
 
 ############################### ARGUMENTS ################################
 num_cores = multiprocessing.cpu_count()
@@ -24,47 +24,41 @@ print "Cores: ", num_cores
 TEST_SET = sys.argv[1]
 INFERRED = sys.argv[2]
 
-inferred = list()
-with open(INFERRED) as f:
-    for line in f:
-        line = line[:-1].split('\t')
-        inferred.append(line)
-
 test = list()
-
-def evaluate(t):
-    # corrupted
-    t_triple = t.split(' ')
-    corr_obj = "{} {}".format(t_triple[0], t_triple[1])
-    corr_sub = "{} {}".format(t_triple[1], t_triple[2])
-    pos = 1
-    for line in inferred:
-        tpl = line[1]
-        if t == tpl:
-            return pos
-        triple = tpl.split(' ')
-        if corr_obj in tpl:
-            # filter out if true
-            if not line[1] in test:
-                pos += 1            
-        elif corr_sub in tpl:
-            # filter out if true
-            if not tpl in test:
-                pos += 1
-    return None
-
 # index test set
 with open(TEST_SET) as f:
     for line in f:
-        line = line[:-1].split(' ')
-        test.append(line[0] + " " + line[1] + " " + line[2])
+        test.append(line[:-3])
 
 def range_test(t):
-    pos = evaluate(t)
-    # print "{}\n\t{}".format(t, pos)
-    if pos is None:
+    t_triple = t.split(' ')
+    corr_obj = "{} {}".format(t_triple[0], t_triple[1])
+    corr_sub = "{} {}".format(t_triple[1], t_triple[2])
+    # collect appearances of corr_obj and corr_sub in inferred, sorted by confidence value
+    conf = list()
+    t_conf = None
+    # print "testing triple: {}".format(t)
+    with open(INFERRED) as f:
+        for line in f:
+            if t in line:
+                t_conf = float(line[:-1].split('\t')[0])
+                continue
+            if corr_obj in line or corr_sub in line:
+                temp = line[:-1].split('\t')
+                i_conf = float(temp[0])
+                i_triple = temp[1]
+                if i_triple not in test:
+                    conf.append(i_conf)
+    if t_conf is None:
         rr = 1.0 / len(test)
         return rr, 0, 0, 0
+    pos = 1
+    for c in conf:
+        if t_conf < c:
+            pos += 1
+    # print "t_conf: {}".format(t_conf)
+    # print "conf: {}".format(conf)
+    # print "pos: {}".format(pos)
     rr = 1.0 / pos
     h1 = 0; h3 = 0; h10 = 0
     if pos <= 10:
@@ -77,8 +71,7 @@ def range_test(t):
 
 rr, h1, h3, h10, n = 0, 0, 0, 0, 0
 mrr, hitsAt1, hitsAt3, hitsAt10 = 0, 0, 0, 0
-
-STEP = 500 * num_cores
+STEP = 50 * num_cores
 
 for i in range(len(test)):
     if i % STEP == 0:
